@@ -1,10 +1,18 @@
 import torch as th
-
+import torch.nn as nn
+from .spikingjelly.spikingjelly.activation_based import neuron
 
 class MNISTNet(th.nn.Module):
     def __init__(self):
         super(MNISTNet, self).__init__()
-        pass
+        self.Linear1 = nn.Linear(28 * 28, 512, bias = False)
+        self.sn1 = neuron.IFNode()
+        self.Linear2 = nn.Linear(512, 10, bias = False)
 
     def forward(self, x):
-        pass
+        x = x.view(-1 , 28 * 28)
+        x = self.Linear1(x)
+        x = self.sn1(x)
+        x = self.Linear3(x)
+        return x
+
