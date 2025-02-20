@@ -1,4 +1,4 @@
-from z3 import Int, And, Or, Not, Implies, Solver, sat
+from z3.z3 import Int, Solver, And, Implies, sat
 
 if __name__ == "__main__":
     x = Int("x")
