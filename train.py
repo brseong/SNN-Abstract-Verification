@@ -18,7 +18,7 @@ def train(data_loader : DataLoader[tuple[th.Tensor, th.Tensor]],
           ) -> None : 
     optim = th.optim.Adam(net.parameters(), lr = learning_rate)
     for epoch in range(num_epochs):
-        total_Loss_train = 0
+        total_loss_train = 0
         total_acc_train = 0
         net.train()
         for i, (data, target) in tqdm(enumerate(iter(data_loader))):
@@ -29,11 +29,11 @@ def train(data_loader : DataLoader[tuple[th.Tensor, th.Tensor]],
             loss = loss_fn(y_hat, target)
             loss.backward()
             optim.step()
-            total_Loss_train += loss.item()
+            total_loss_train += loss.item()
             pred_target = y_hat.argmax(1)
             total_acc_train += (pred_target == target).sum()
             functional.reset_net(net)
-        Loss_train = total_Loss_train / (60000 / batch_size)
+        Loss_train = total_loss_train / (60000 / batch_size)
         acc_train = (total_acc_train / 60000) * 100 
         print(f'{epoch + 1} epoch\'s of Loss : {Loss_train}, accuracy rate : {acc_train}')
         
