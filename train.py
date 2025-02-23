@@ -75,16 +75,16 @@ if __name__ == "__main__":
     test_loader = DataLoader[tuple[th.Tensor, th.Tensor]](
         MNIST_test, batch_size = batch_size, shuffle = False, num_workers = num_workers
     )
-    Loss_function= nn.CrossEntropyLoss().to(device)
+    loss_fn= nn.CrossEntropyLoss().to(device)
     train(num_epochs = num_epochs,
           batch_size = batch_size,
           learning_rate = learning_rate,
           data_loader= train_loader,
-          loss_fn = Loss_function
+          loss_fn = loss_fn
           )
     test_loss, test_acc = test(
         data_loader=test_loader,
-        loss_fn = Loss_function
+        loss_fn = loss_fn
         )
     print(f'test loss = {test_loss}, and test accuracy = {test_acc}')
     th.save(net.state_dict(), './saved/model.pt')
