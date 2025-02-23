@@ -10,13 +10,13 @@ from tqdm.auto import tqdm
 from utils.spikingjelly.spikingjelly.activation_based import functional
 
 
-def train(data_loader : DataLoader,
-          loss_fn,
+def train(data_loader : DataLoader[tuple[th.Tensor, th.Tensor]],
+          loss_fn : Callable[[th.Tensor, th.Tensor], th.Tensor],
           num_epochs : int = 10,
           batch_size : int = 32, 
           learning_rate : float = 1e-3,
           ) -> None : 
-    Optimizer = th.optim.Adam(net.parameters(), lr = learning_rate)
+    optim = th.optim.Adam(net.parameters(), lr = learning_rate)
     for epoch in range(num_epochs):
         total_Loss_train = 0
         total_acc_train = 0
@@ -24,12 +24,12 @@ def train(data_loader : DataLoader,
         for i, (data, target) in tqdm(enumerate(iter(data_loader))):
             data = data.to(device)
             target = target.to(device)
-            Optimizer.zero_grad()
+            optim.zero_grad()
             y_hat = net(data)
-            Loss = loss_fn(y_hat, target)
-            Loss.backward()
-            Optimizer.step()
-            total_Loss_train += Loss.item()
+            loss = loss_fn(y_hat, target)
+            loss.backward()
+            optim.step()
+            total_Loss_train += loss.item()
             pred_target = y_hat.argmax(1)
             total_acc_train += (pred_target == target).sum()
             functional.reset_net(net)
@@ -37,8 +37,8 @@ def train(data_loader : DataLoader,
         acc_train = (total_acc_train / 60000) * 100 
         print(f'{epoch + 1} epoch\'s of Loss : {Loss_train}, accuracy rate : {acc_train}')
         
-def test(data_loader : DataLoader, 
-         loss_fn,) : 
+def test(data_loader : DataLoader[tuple[th.Tensor, th.Tensor]], 
+         loss_fn: Callable[[th.Tensor, th.Tensor], th.Tensor]) : 
     net.eval()
     total_Loss_test = 0
     total_acc_test = 0
@@ -69,10 +69,10 @@ if __name__ == "__main__":
     MNIST_train = MNIST(root = './data', download = True, train = True, transform = transforms.ToTensor())
     MNIST_test = MNIST(root = './data', download = True, train = False, transform = transforms.ToTensor())
 
-    train_loader = DataLoader(
+    train_loader = DataLoader[tuple[th.Tensor, th.Tensor]](
         MNIST_train, batch_size = batch_size, shuffle = True, num_workers = num_workers
     )
-    test_loader = DataLoader(
+    test_loader = DataLoader[tuple[th.Tensor, th.Tensor]](
         MNIST_test, batch_size = batch_size, shuffle = False, num_workers = num_workers
     )
     Loss_function= nn.CrossEntropyLoss().to(device)
