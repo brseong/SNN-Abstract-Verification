@@ -10,7 +10,15 @@ class MNISTNet(th.nn.Module):
         self.sn1 = neuron.IFNode()
         self.Linear2 = nn.Linear(512, 10, bias = False)
 
-    def forward(self, x):
+    def forward(self, x:th.Tensor):
+        """Forward pass of the network
+
+        Args:
+            x (th.Tensor): Input tensor, shape (batch_size, 1, 28, 28)
+
+        Returns:
+            th.Tensor: Output tensor, shape (batch_size, 10)
+        """
         x = self.flatten1(x)
         x = self.Linear1(x)
         x = self.sn1(x)

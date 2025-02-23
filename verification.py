@@ -1,5 +1,5 @@
 from z3.z3 import Int, Real, Solver, And, Implies, sat
-from utils.encoding import floor
+from utils.encoding.encoding import generate_snn
 
 if __name__ == "__main__":
     x = Real("x")
