@@ -20,10 +20,10 @@ class MNISTNet(th.nn.Module):
         """Forward pass of the network
 
         Args:
-            x (th.Tensor): Input tensor, shape (batch_size, 1, 28, 28)
+            x (th.Tensor): Input tensor, shape ``(batch_size, 1, 28, 28)``
 
         Returns:
-            th.Tensor: Output tensor, shape (batch_size, 10)
+            th.Tensor: Output tensor, shape ``(batch_size, 10)``
         """
         x = self.flatten1(x)
         x = self.linear1(x)

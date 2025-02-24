@@ -37,7 +37,11 @@ def clamp(s: Solver, _in: ArithRef, _min: int, _max: int) -> Solver:
 
 
 def generate_snn(
-    s: Solver, weight_list: list[th.Tensor], data: Z3Data, save_path: str | None = None
+    s: Solver,
+    weight_list: list[th.Tensor],
+    data: Z3Data,
+    save_path: str | None = None,
+    load_sexpr: bool = False,
 ) -> Solver:
     """Generate SMT encoding for the SNN.
     Args:
@@ -74,6 +78,13 @@ def generate_snn(
                     postsynaptic_neuron, presynaptic_neuron
                 ].item()
 
+    if load_sexpr:
+        if save_path is None:
+            raise ValueError("save_path must be provided if load_sexpr is True")
+        with open(save_path, "r") as f:
+            s.from_string(f.read())
+        return s
+
     # Describe the dynamics of the SNN
     for postsynaptic_layer in tqdm(
         range(1, len(data.n_features)), desc="Generating SNN dynamics..."
@@ -102,7 +113,7 @@ def generate_snn(
             if candidate != other:
                 sub_terms.append(
                     data.n_spikes[len(data.n_features) - 1, candidate]
-                    >= data.n_spikes[len(data.n_features) - 1, other]
+                    > data.n_spikes[len(data.n_features) - 1, other]
                 )
         s.add(Implies(prediction == candidate, And(sub_terms)))  # type: ignore
         del sub_terms
