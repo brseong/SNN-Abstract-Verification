@@ -10,13 +10,13 @@ from utils.spikingjelly.spikingjelly.activation_based import functional, encodin
 
 
 def train(
-    data_set: Dataset[tuple[th.Tensor, th.Tensor]],
+    dataset: Dataset[tuple[th.Tensor, th.Tensor]],
     num_epochs: int = 10,
     learning_rate: float = 1e-3,
     T: int = 20,
 ) -> None:
     data_loader = DataLoader(
-        data_set, batch_size = batch_size, shuffle=True, num_workers=num_workers
+        dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
     )
     optim = th.optim.Adam(net.parameters(), lr=learning_rate)
     encoder = encoding.PoissonEncoder()
@@ -40,16 +40,16 @@ def train(
             pred_target = y_hat.argmax(1)
             total_acc_train += (pred_target == target).sum()
             functional.reset_net(net)
-        loss_train = total_loss_train / len(data_set)
-        acc_train = (total_acc_train / len(data_set)) * 100
+        loss_train = total_loss_train / len(dataset)
+        acc_train = (total_acc_train / len(dataset)) * 100
         print(
             f"{epoch + 1} epoch's of Loss : {loss_train}, accuracy rate : {acc_train}"
         )
 
 
-def test(data_set: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 20):
+def test(dataset: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 20):
     data_loader = DataLoader(
-        data_set, batch_size = batch_size, shuffle = False, num_workers= num_workers
+        dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers
     )
     encoder = encoding.PoissonEncoder()
     net.eval()
@@ -69,8 +69,8 @@ def test(data_set: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 20):
             pred_target = y_hat.argmax(1)
             total_acc_test += (pred_target == target).sum()
             functional.reset_net(net)
-        loss_test = total_loss_test / len(data_set)
-        acc_test = (total_acc_test / len(data_set)) * 100
+        loss_test = total_loss_test / len(dataset)
+        acc_test = (total_acc_test / len(dataset)) * 100
     return loss_test, acc_test
 
 
@@ -94,13 +94,12 @@ if __name__ == "__main__":
         root="./data", download=True, train=False, transform=transforms.ToTensor()
     )
 
-    # train(
-    #     num_epochs=num_epochs,
-    #     batch_size=batch_size,
-    #     learning_rate=learning_rate,
-    #     data_loader=train_loader,
-    #     T=num_steps,
-    # )
-    test_loss, test_acc = test(data_set= MNIST_test, T=num_steps)
+    train(
+        dataset=MNIST_train,
+        num_epochs=num_epochs,
+        learning_rate=learning_rate,
+        T=num_steps,
+    )
+    test_loss, test_acc = test(dataset=MNIST_test, T=num_steps)
     print(f"test loss = {test_loss}, and test accuracy = {test_acc}")
     th.save(net.state_dict(), "./saved/model.pt")

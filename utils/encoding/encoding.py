@@ -103,7 +103,7 @@ def generate_snn(
             if candidate != other:
                 sub_terms.append(
                     data.n_spikes[len(data.n_features) - 1, candidate]
-                    > data.n_spikes[-1, other]
+                    >= data.n_spikes[len(data.n_features) - 1, other]
                 )
         s.add(Implies(prediction == candidate, And(sub_terms)))  # type: ignore
         del sub_terms
