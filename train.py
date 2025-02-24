@@ -78,6 +78,7 @@ if __name__ == "__main__":
     batch_size = 32
     num_workers = 4
     learning_rate = 1e-2
+    num_steps = 20
 
     device = th.device("cuda:0" if th.cuda.is_available() else "cpu")
     net = MNISTNet().to(device)
@@ -100,8 +101,8 @@ if __name__ == "__main__":
     #     batch_size=batch_size,
     #     learning_rate=learning_rate,
     #     data_loader=train_loader,
-    #     T=20,
+    #     T=num_steps,
     # )
-    test_loss, test_acc = test(data_loader=test_loader, T=20)
+    test_loss, test_acc = test(data_loader=test_loader, T=num_steps)
     print(f"test loss = {test_loss}, and test accuracy = {test_acc}")
     th.save(net.state_dict(), "./saved/model.pt")
