@@ -64,9 +64,9 @@ def test(data_loader: DataLoader[tuple[th.Tensor, th.Tensor]], T: int = 20):
             pred_target = y_hat.argmax(1)
             total_acc_test += (pred_target == target).sum()
             functional.reset_net(net)
-        Loss_test = total_loss_test / (10000 / 32)
+        loss_test = total_loss_test / (10000 / 32)
         acc_test = (total_acc_test / 10000) * 100
-    return Loss_test, acc_test
+    return loss_test, acc_test
 
 
 if __name__ == "__main__":
@@ -94,13 +94,13 @@ if __name__ == "__main__":
     test_loader = DataLoader[tuple[th.Tensor, th.Tensor]](
         MNIST_test, batch_size=batch_size, shuffle=False, num_workers=num_workers
     )
-    train(
-        num_epochs=num_epochs,
-        batch_size=batch_size,
-        learning_rate=learning_rate,
-        data_loader=train_loader,
-        T=20,
-    )
+    # train(
+    #     num_epochs=num_epochs,
+    #     batch_size=batch_size,
+    #     learning_rate=learning_rate,
+    #     data_loader=train_loader,
+    #     T=20,
+    # )
     test_loss, test_acc = test(data_loader=test_loader, T=20)
     print(f"test loss = {test_loss}, and test accuracy = {test_acc}")
     th.save(net.state_dict(), "./saved/model.pt")
