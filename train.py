@@ -14,6 +14,7 @@ def train(
     num_epochs: int = 10,
     learning_rate: float = 1e-3,
     T: int = 20,
+    save: bool = False,
 ) -> None:
     data_loader = DataLoader(
         dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
@@ -45,6 +46,8 @@ def train(
         print(
             f"{epoch + 1} epoch's of Loss : {loss_train}, accuracy rate : {acc_train}"
         )
+        if save:
+            th.save(net.state_dict(), "./saved/model.pt")
 
 
 def test(dataset: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 20):
@@ -85,6 +88,7 @@ if __name__ == "__main__":
     learning_rate = 1e-2
     num_steps = 20
     hidden_features = 32
+    save = True
 
     device = th.device("cuda:0" if th.cuda.is_available() else "cpu")
     net = MNISTNet(hidden_features=hidden_features).to(device)
@@ -101,7 +105,7 @@ if __name__ == "__main__":
         num_epochs=num_epochs,
         learning_rate=learning_rate,
         T=num_steps,
+        save=save,
     )
     test_loss, test_acc = test(dataset=MNIST_test, T=num_steps)
     print(f"test loss = {test_loss}, and test accuracy = {test_acc}")
-    th.save(net.state_dict(), "./saved/model.pt")

@@ -7,7 +7,7 @@ from tqdm.auto import tqdm
 
 
 def floor(s: Solver, _in: ArithRef, _floor: ArithRef) -> Solver:
-    """Define the floor relation. True if the _floor is the floor of _in, False otherwise
+    """Define the floor relation. ``True`` if the ``_floor`` is the floor of ``_in``, ``False`` otherwise
 
     Args:
         s (Solver): Solver object
@@ -39,11 +39,10 @@ def clamp(s: Solver, _in: ArithRef, _min: int, _max: int) -> Solver:
 def generate_snn(
     s: Solver, weight_list: list[th.Tensor], data: Z3Data, save_path: str | None = None
 ) -> Solver:
-    """Generate SMT encoding for the SNN
-
+    """Generate SMT encoding for the SNN.
     Args:
         s (Solver): Solver object
-        weight_list (list[th.Tensor]): List of weight tensors. Each tensor is of shape (n_features[layer + 1], n_features[layer])
+        weight_list (list[th.Tensor]): List of weight tensors. Each tensor is of shape (``n_features[layer + 1]``, ``n_features[layer]``)
         data (Z3Data): Z3Data object, used to store data throughout the experiment
 
     Returns:
@@ -51,19 +50,19 @@ def generate_snn(
     """
     # Generate integer variables for the number of spikes
     for postsynaptic_layer in tqdm(
-        range(len(data.n_features)), desc="Generating spike counts"
+        range(len(data.n_features)), desc="Generating spike counts..."
     ):
         for postsynaptic_neuron in tqdm(
             range(data.n_features[postsynaptic_layer]), leave=False
         ):
             data.n_spikes[postsynaptic_layer, postsynaptic_neuron] = Int(
-                f"n_spks_{postsynaptic_layer}_{postsynaptic_neuron}"
+                f"#_of_spks_{postsynaptic_layer}_{postsynaptic_neuron}"
             )
 
     # Generate real variables for the weights
     for presynaptic_layer, postsynaptic_layer in tqdm(
         zip(range(len(data.n_features) - 1), range(1, len(data.n_features))),
-        desc="Generating weights",
+        desc="Generating weights...",
     ):
         for presynaptic_neuron in tqdm(
             range(data.n_features[presynaptic_layer]), leave=False
@@ -77,13 +76,13 @@ def generate_snn(
 
     # Describe the dynamics of the SNN
     for postsynaptic_layer in tqdm(
-        range(1, len(data.n_features)), desc="Generating SNN dynamics"
+        range(1, len(data.n_features)), desc="Generating SNN dynamics..."
     ):
         for postsynaptic_neuron in tqdm(
             range(data.n_features[postsynaptic_layer]), leave=False
         ):
             presynaptic_layer = postsynaptic_layer - 1
-            epsp = 0
+            epsp = RealVal(0)
             for presynaptic_neuron in range(data.n_features[presynaptic_layer]):
                 epsp += (
                     data.weight[
@@ -91,7 +90,7 @@ def generate_snn(
                     ]
                     * data.n_spikes[presynaptic_layer, presynaptic_neuron]
                 )
-                floor(s, epsp, data.n_spikes[postsynaptic_layer, postsynaptic_neuron])
+            floor(s, epsp, data.n_spikes[postsynaptic_layer, postsynaptic_neuron])
             del epsp
 
     # Describe the prediction of the SNN
@@ -122,7 +121,7 @@ def allocate_input(s: Solver, data: Z3Data, _input: th.Tensor) -> Solver:
     Args:
         s (Solver): Solver object
         data (Z3Data): Z3Data object
-        _input (th.Tensor): Input tensor, shape (n_timesteps, n_features[0])
+        _input (th.Tensor): Input tensor, shape (``n_steps``, ``n_features[0]``)
 
     Returns:
         Solver: Solver object with the input values allocated
