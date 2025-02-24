@@ -2,7 +2,7 @@ import torch as th
 import torch.nn.functional as F
 
 from utils.model import MNISTNet
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from torchvision.datasets import MNIST
 from tqdm.auto import tqdm
@@ -10,12 +10,14 @@ from utils.spikingjelly.spikingjelly.activation_based import functional, encodin
 
 
 def train(
-    data_loader: DataLoader[tuple[th.Tensor, th.Tensor]],
+    data_set: Dataset[tuple[th.Tensor, th.Tensor]],
     num_epochs: int = 10,
-    batch_size: int = 32,
     learning_rate: float = 1e-3,
     T: int = 20,
 ) -> None:
+    data_loader = DataLoader(
+        data_set, batch_size = batch_size, shuffle=True, num_workers=num_workers
+    )
     optim = th.optim.Adam(net.parameters(), lr=learning_rate)
     encoder = encoding.PoissonEncoder()
     for epoch in range(num_epochs):
@@ -38,14 +40,17 @@ def train(
             pred_target = y_hat.argmax(1)
             total_acc_train += (pred_target == target).sum()
             functional.reset_net(net)
-        loss_train = total_loss_train / (60000 / batch_size)
-        acc_train = (total_acc_train / 60000) * 100
+        loss_train = total_loss_train / len(data_set)
+        acc_train = (total_acc_train / len(data_set)) * 100
         print(
             f"{epoch + 1} epoch's of Loss : {loss_train}, accuracy rate : {acc_train}"
         )
 
 
-def test(data_loader: DataLoader[tuple[th.Tensor, th.Tensor]], T: int = 20):
+def test(data_set: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 20):
+    data_loader = DataLoader(
+        data_set, batch_size = batch_size, shuffle = False, num_workers= num_workers
+    )
     encoder = encoding.PoissonEncoder()
     net.eval()
     total_loss_test = 0
@@ -57,7 +62,6 @@ def test(data_loader: DataLoader[tuple[th.Tensor, th.Tensor]], T: int = 20):
             y_hat = 0.0
             for _ in range(T):
                 encode = encoder(data)
-                print(encode.shape)
                 y_hat += net(encode)
             y_hat = y_hat / T
             loss = F.mse_loss(y_hat, target_onehot)
@@ -65,8 +69,8 @@ def test(data_loader: DataLoader[tuple[th.Tensor, th.Tensor]], T: int = 20):
             pred_target = y_hat.argmax(1)
             total_acc_test += (pred_target == target).sum()
             functional.reset_net(net)
-        loss_test = total_loss_test / (10000 / 32)
-        acc_test = (total_acc_test / 10000) * 100
+        loss_test = total_loss_test / len(data_set)
+        acc_test = (total_acc_test / len(data_set)) * 100
     return loss_test, acc_test
 
 
@@ -90,12 +94,6 @@ if __name__ == "__main__":
         root="./data", download=True, train=False, transform=transforms.ToTensor()
     )
 
-    train_loader = DataLoader[tuple[th.Tensor, th.Tensor]](
-        MNIST_train, batch_size=batch_size, shuffle=True, num_workers=num_workers
-    )
-    test_loader = DataLoader[tuple[th.Tensor, th.Tensor]](
-        MNIST_test, batch_size=batch_size, shuffle=False, num_workers=num_workers
-    )
     # train(
     #     num_epochs=num_epochs,
     #     batch_size=batch_size,
@@ -103,6 +101,6 @@ if __name__ == "__main__":
     #     data_loader=train_loader,
     #     T=num_steps,
     # )
-    test_loss, test_acc = test(data_loader=test_loader, T=num_steps)
+    test_loss, test_acc = test(data_set= MNIST_test, T=num_steps)
     print(f"test loss = {test_loss}, and test accuracy = {test_acc}")
     th.save(net.state_dict(), "./saved/model.pt")
