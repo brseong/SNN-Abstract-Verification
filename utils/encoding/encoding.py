@@ -111,6 +111,7 @@ def generate_snn(
     if save_path is not None:
         with open(save_path, "w") as f:
             f.write(s.sexpr())
+            print(f"Saved SMT encoding to {save_path}")
 
     return s
 

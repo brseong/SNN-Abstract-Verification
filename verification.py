@@ -1,6 +1,7 @@
 import pdb
 import torch as th
 import torch.nn.functional as F
+import wandb
 
 from z3.z3 import Int, Real, Solver, And, Implies, sat
 from utils.encoding.encoding import generate_snn, allocate_input
@@ -18,10 +19,21 @@ batch_size = 1
 num_workers = 4
 learning_rate = 1e-2
 n_steps = 20
-save_sexpr = False
+save_sexpr = True
+
+cfg = {
+    "num_epochs": num_epochs,
+    "batch_size": batch_size,
+    "num_workers": num_workers,
+    "learning_rate": learning_rate,
+    "n_steps": n_steps,
+    "save_sexpr": save_sexpr,
+}
+
 device = th.device("cuda:0" if th.cuda.is_available() else "cpu")
 
 th.random.manual_seed(42)  # type: ignore
+th.cuda.manual_seed(42)
 th.use_deterministic_algorithms(True)
 
 
@@ -64,6 +76,8 @@ def net_inference(model: th.nn.Module, data: th.Tensor, num_steps: int) -> th.Te
 
 
 if __name__ == "__main__":
+    wandb.init(project="snn-abs-verification", config=cfg)
+
     model = MNISTNet().to(device)
     model.load_state_dict(th.load("saved/model.pt"), strict=True)  # type: ignore
 
@@ -89,7 +103,7 @@ if __name__ == "__main__":
         n_spikes={},
         weight={},
     )
-    save_path = None if not save_sexpr else "saved/sexpr/snn_z3.txt"
+    save_path = "saved/sexpr/snn_z3.txt" if save_sexpr else None
     generate_snn(s, weight_list=weight_list, data=z3data, save_path=save_path)
     allocate_input(s, data=z3data, _input=data[0].flatten(start_dim=1))
 

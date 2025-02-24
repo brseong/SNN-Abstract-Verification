@@ -77,15 +77,17 @@ def test(dataset: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 20):
 if __name__ == "__main__":
     th.manual_seed(0)
     th.cuda.manual_seed(0)
+    th.use_deterministic_algorithms(True)
 
     num_epochs = 50
     batch_size = 32
     num_workers = 4
     learning_rate = 1e-2
     num_steps = 20
+    hidden_features = 32
 
     device = th.device("cuda:0" if th.cuda.is_available() else "cpu")
-    net = MNISTNet().to(device)
+    net = MNISTNet(hidden_features=hidden_features).to(device)
 
     MNIST_train = MNIST(
         root="./data", download=True, train=True, transform=transforms.ToTensor()
