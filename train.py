@@ -48,7 +48,7 @@ def train(
 def test(data_loader: DataLoader[tuple[th.Tensor, th.Tensor]], T: int = 20):
     encoder = encoding.PoissonEncoder()
     net.eval()
-    total_Loss_test = 0
+    total_loss_test = 0
     total_acc_test = 0
     with th.no_grad():
         for i, (data, target) in tqdm(enumerate(iter(data_loader))):
@@ -60,11 +60,11 @@ def test(data_loader: DataLoader[tuple[th.Tensor, th.Tensor]], T: int = 20):
                 y_hat += net(encode)
             y_hat = y_hat / T
             loss = F.mse_loss(y_hat, target_onehot)
-            total_Loss_test += loss.item()
+            total_loss_test += loss.item()
             pred_target = y_hat.argmax(1)
             total_acc_test += (pred_target == target).sum()
             functional.reset_net(net)
-        Loss_test = total_Loss_test / (10000 / 32)
+        Loss_test = total_loss_test / (10000 / 32)
         acc_test = (total_acc_test / 10000) * 100
     return Loss_test, acc_test
 
