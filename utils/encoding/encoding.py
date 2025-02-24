@@ -1,7 +1,9 @@
+import pdb
+import torch as th
 from z3.z3 import Int, Real, RealVal, Solver, And, Implies, sat, ArithRef, BoolRef
 from uuid import uuid4
 from ..types import Z3Data, Abstraction
-import torch as th
+from tqdm.auto import tqdm
 
 
 def floor(s: Solver, _in: ArithRef, _floor: ArithRef) -> Solver:
@@ -34,39 +36,51 @@ def clamp(s: Solver, _in: ArithRef, _min: int, _max: int) -> Solver:
     return s
 
 
-def generate_snn(s: Solver, weight: list[th.Tensor], data: Z3Data):
+def generate_snn(s: Solver, weight_list: list[th.Tensor], data: Z3Data):
     """Generate SMT encoding for the SNN
 
     Args:
         s (Solver): Solver object
-        weight (list[th.Tensor]): List of weight tensors. Each tensor is of shape (n_features[layer], n_features[layer + 1])
+        weight_list (list[th.Tensor]): List of weight tensors. Each tensor is of shape (n_features[layer + 1], n_features[layer])
         data (Z3Data): Z3Data object, used to store data throughout the experiment
 
     Returns:
         Solver: Solver object with the SMT encoding of the SNN
     """
     # Generate integer variables for the number of spikes
-    for postsynaptic_layer in range(len(data.n_features)):
-        for postsynaptic_neuron in range(data.n_features[postsynaptic_layer]):
+    for postsynaptic_layer in tqdm(
+        range(len(data.n_features)), desc="Generating spike counts"
+    ):
+        for postsynaptic_neuron in tqdm(
+            range(data.n_features[postsynaptic_layer]), leave=False
+        ):
             data.n_spikes[postsynaptic_layer, postsynaptic_neuron] = Int(
                 f"n_spks_{postsynaptic_layer}_{postsynaptic_neuron}"
             )
 
     # Generate real variables for the weights
-    for presynaptic_layer, postsynaptic_layer in zip(
-        range(len(data.n_features) - 1), range(1, len(data.n_features))
+    for presynaptic_layer, postsynaptic_layer in tqdm(
+        zip(range(len(data.n_features) - 1), range(1, len(data.n_features))),
+        desc="Generating weights",
     ):
-        for presynaptic_neuron in range(data.n_features[presynaptic_layer]):
+        for presynaptic_neuron in tqdm(
+            range(data.n_features[presynaptic_layer]), leave=False
+        ):
             for postsynaptic_neuron in range(data.n_features[postsynaptic_layer]):
                 data.weight[
                     presynaptic_layer, presynaptic_neuron, postsynaptic_neuron
-                ] = weight[presynaptic_layer][
-                    presynaptic_neuron, postsynaptic_neuron
+                ] = weight_list[presynaptic_layer][
+                    postsynaptic_neuron, presynaptic_neuron
                 ].item()
 
-    for postsynaptic_layer in range(1, len(data.n_features)):
-        for postsynaptic_neuron in range(data.n_features[postsynaptic_layer]):
-            presynaptic_layer = postsynaptic_neuron - 1
+    # Describe the dynamics of the SNN
+    for postsynaptic_layer in tqdm(
+        range(1, len(data.n_features)), desc="Generating SNN dynamics"
+    ):
+        for postsynaptic_neuron in tqdm(
+            range(data.n_features[postsynaptic_layer]), leave=False
+        ):
+            presynaptic_layer = postsynaptic_layer - 1
             epsp = 0
             for presynaptic_neuron in range(data.n_features[presynaptic_layer]):
                 epsp += (
@@ -78,17 +92,18 @@ def generate_snn(s: Solver, weight: list[th.Tensor], data: Z3Data):
                 floor(s, epsp, data.n_spikes[postsynaptic_layer, postsynaptic_neuron])
             del epsp
 
+    # Describe the prediction of the SNN
     prediction = Int("prediction")
     clamp(s, prediction, 0, data.n_features[-1] - 1)
     for candidate in range(data.n_features[-1]):
-        sub_terms_ = []
+        sub_terms = list[BoolRef]()
         for other in range(data.n_features[-1]):
             if candidate != other:
-                sub_terms_.append(
+                sub_terms.append(
                     data.n_spikes[-1, candidate] > data.n_spikes[-1, other]
                 )
-        s.add(Implies(prediction == candidate, And(sub_terms_)))
-        del sub_terms_
+        s.add(Implies(prediction == candidate, And(sub_terms)))  # type: ignore
+        del sub_terms
 
     return s
 
@@ -106,7 +121,7 @@ def allocate_input(s: Solver, data: Z3Data, _input: th.Tensor) -> Solver:
     """
     input_spikes = _input.sum(dim=0)
     for neuron in range(data.n_features[0]):
-        s.add(data.n_spikes[0, neuron] == input_spikes[neuron].item())
+        s.add(data.n_spikes[0, neuron] == input_spikes[neuron].item())  # type: ignore
 
     return s
 
@@ -116,4 +131,4 @@ def generate_adversarial_constraints(s: Solver, data: Z3Data, abstraction: Abstr
     for layer in range(len(data.n_features)):
         for step in range(data.n_steps):
             for neuron in range(data.n_features[layer]):
-                s.add(clamp(data.n_spikes[layer, neuron], 0, 1))
+                pass

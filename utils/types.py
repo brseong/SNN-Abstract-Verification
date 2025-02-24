@@ -13,6 +13,7 @@ class Z3Data:
     weight: dict[tuple[int, int, int], float]
     """(presynaptic layer, presynaptic neuron, postsynaptic neuron) -> float"""
 
+
 @dataclass
 class Abstraction:
     delta_counts: int
