@@ -18,6 +18,7 @@ batch_size = 1
 num_workers = 4
 learning_rate = 1e-2
 n_steps = 20
+load_sexpr = False
 device = th.device("cuda:0" if th.cuda.is_available() else "cpu")
 
 th.random.manual_seed(42)  # type: ignore
@@ -88,7 +89,8 @@ if __name__ == "__main__":
         n_spikes={},
         weight={},
     )
-    generate_snn(s, weight_list=weight_list, data=z3data)
+    save_path = None if not load_sexpr else "saved/sexpr/snn_z3.txt"
+    generate_snn(s, weight_list=weight_list, data=z3data, save_path=save_path)
     allocate_input(s, data=z3data, _input=data[0].flatten(start_dim=1))
 
     print("Start solving")

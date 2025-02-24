@@ -36,7 +36,9 @@ def clamp(s: Solver, _in: ArithRef, _min: int, _max: int) -> Solver:
     return s
 
 
-def generate_snn(s: Solver, weight_list: list[th.Tensor], data: Z3Data):
+def generate_snn(
+    s: Solver, weight_list: list[th.Tensor], data: Z3Data, save_path: str | None = None
+) -> Solver:
     """Generate SMT encoding for the SNN
 
     Args:
@@ -100,10 +102,15 @@ def generate_snn(s: Solver, weight_list: list[th.Tensor], data: Z3Data):
         for other in range(data.n_features[-1]):
             if candidate != other:
                 sub_terms.append(
-                    data.n_spikes[-1, candidate] > data.n_spikes[-1, other]
+                    data.n_spikes[len(data.n_features) - 1, candidate]
+                    > data.n_spikes[-1, other]
                 )
         s.add(Implies(prediction == candidate, And(sub_terms)))  # type: ignore
         del sub_terms
+
+    if save_path is not None:
+        with open(save_path, "w") as f:
+            f.write(s.sexpr())
 
     return s
 
