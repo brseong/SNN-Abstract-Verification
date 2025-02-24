@@ -93,9 +93,20 @@ def generate_snn(s: Solver, weight: list[th.Tensor], data: Z3Data):
     return s
 
 
-def allocate_input(s: Solver, data: Z3Data, input_: th.Tensor):
+def allocate_input(s: Solver, data: Z3Data, _input: th.Tensor) -> Solver:
+    """Allocate the input values to the SNN
+
+    Args:
+        s (Solver): Solver object
+        data (Z3Data): Z3Data object
+        _input (th.Tensor): Input tensor, shape (n_timesteps, n_features[0])
+
+    Returns:
+        Solver: Solver object with the input values allocated
+    """
+    input_spikes = _input.sum(dim=0)
     for neuron in range(data.n_features[0]):
-        s.add(data.n_spikes[0, neuron] == input_[neuron].item())
+        s.add(data.n_spikes[0, neuron] == input_spikes[neuron].item())
 
     return s
 

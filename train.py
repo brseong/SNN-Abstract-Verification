@@ -38,10 +38,10 @@ def train(
             pred_target = y_hat.argmax(1)
             total_acc_train += (pred_target == target).sum()
             functional.reset_net(net)
-        Loss_train = total_loss_train / (60000 / batch_size)
+        loss_train = total_loss_train / (60000 / batch_size)
         acc_train = (total_acc_train / 60000) * 100
         print(
-            f"{epoch + 1} epoch's of Loss : {Loss_train}, accuracy rate : {acc_train}"
+            f"{epoch + 1} epoch's of Loss : {loss_train}, accuracy rate : {acc_train}"
         )
 
 
@@ -57,6 +57,7 @@ def test(data_loader: DataLoader[tuple[th.Tensor, th.Tensor]], T: int = 20):
             y_hat = 0.0
             for _ in range(T):
                 encode = encoder(data)
+                print(encode.shape)
                 y_hat += net(encode)
             y_hat = y_hat / T
             loss = F.mse_loss(y_hat, target_onehot)
