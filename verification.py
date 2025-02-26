@@ -4,7 +4,8 @@ import torch.nn.functional as F
 import wandb
 
 from z3.z3 import Int, Real, Solver, And, Implies, sat, set_param
-from utils.encoding.encoding import generate_snn, allocate_input
+from utils.encoding.z3 import generate_snn, allocate_input
+from utils.encoding.snn import encode_input
 from utils.model import MNISTNet
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -33,33 +34,13 @@ cfg = {
     "save_sexpr": save_sexpr,
     "load_sexpr": load_sexpr,
     "hidden_size": hidden_size,
-}3
+}
 
 device = th.device("cuda:0" if th.cuda.is_available() else "cpu")
 
 th.random.manual_seed(42)  # type: ignore
 th.cuda.manual_seed(42)
 th.use_deterministic_algorithms(True)
-
-
-def encode_input(
-    data: th.Tensor, num_steps: int, encoder: PoissonEncoder = PoissonEncoder()
-) -> th.Tensor:
-    """Encode the input data into spikes with Poisson process.
-
-    Args:
-        data (th.Tensor): Input data, shape (batch_size, 1, 28, 28)
-        num_steps (int): Number of steps in the simulation
-        encoder (PoissonEncoder, optional): Encoder object. Defaults to PoissonEncoder().
-
-    Returns:
-        th.Tensor: Encoded spikes, shape (batch_size, num_steps, 1, 28, 28)
-    """
-    batch_size, *features = data.shape
-    encoded = th.zeros(batch_size, num_steps, *features, device=data.device)
-    for t in range(num_steps):
-        encoded[:, t] = encoder(data)
-    return encoded
 
 
 def net_inference_single(
