@@ -6,7 +6,7 @@ import wandb
 from z3.z3 import Int, Real, Solver, And, Implies, sat, set_param
 from utils.encoding.z3 import generate_snn, allocate_input
 from utils.encoding.snn import encode_input
-from utils.model import MNISTNet
+from utils.model import AbsMNISTNet
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import MNIST
@@ -15,7 +15,6 @@ from utils.spikingjelly.spikingjelly.activation_based import functional
 from utils.spikingjelly.spikingjelly.activation_based.encoding import PoissonEncoder
 from utils.types import Z3Data
 
-num_epochs = 50
 batch_size = 1
 num_workers = 4
 learning_rate = 1e-2
@@ -26,7 +25,6 @@ hidden_size = 512
 model_suffix = f"{hidden_size}"
 sexpr_suffix = f"{hidden_size}"
 cfg = {
-    "num_epochs": num_epochs,
     "batch_size": batch_size,
     "num_workers": num_workers,
     "learning_rate": learning_rate,
@@ -43,42 +41,36 @@ th.cuda.manual_seed(42)
 th.use_deterministic_algorithms(True)
 
 
-def net_inference_single(
-    model: th.nn.Module, data: th.Tensor, num_steps: int
-) -> th.Tensor:
+def net_inference_single(model: th.nn.Module, data: th.Tensor) -> th.Tensor:
     """Perform inference on the network.
 
     Args:
         model (th.nn.Module): Network model
-        data (th.Tensor): Input data, shape (num_steps, 1, 28, 28)
-        num_steps (int): Number of steps in the simulation
+        data (th.Tensor): Input data, shape (1, 28, 28)
 
     Returns:
-        th.Tensor: Output tensor, shape (batch_size)
+        th.Tensor: Output tensor, shape (n_maxima,)
     """
     model.eval()
-    y_hat = th.zeros(10, device=data.device)
-    for t in range(num_steps):
-        y_hat += model(data[t].flatten(start_dim=1).unsqueeze(0)).squeeze(0)
-    # print(y_hat)
-    # return y_hat.argmax(dim=0)
+    y_hat = model(data.unsqueeze(0)).squeeze(0)
     return (y_hat == y_hat.max()).nonzero(as_tuple=True)[0]
 
 
-def run_verification(model: MNISTNet, data: th.Tensor, target: th.Tensor):
+@th.no_grad()
+def run_verification(model: AbsMNISTNet, data: th.Tensor, target: th.Tensor):
     """Run verification on the network.
 
     Args:
-        model (MNISTNet): MNISTNet model
+        model (AbsMNISTNet): AbsMNISTNet model
         data (th.Tensor): Input data, shape ``(batch_size, 1, 28, 28)``
         target (th.Tensor): Target labels, shape ``(batch_size,)``
     """
     data, target = data.to(device), target.to(device)
     data = encode_input(
-        data, num_steps=n_steps
-    )  # data.shape = (batch_size, num_steps, 1, 28, 28)
+        data, num_steps=n_steps, as_counts=True
+    )  # data.shape = (batch_size, 1, 28, 28)
 
-    th_pred = net_inference_single(model, data[0], n_steps)
+    th_pred = net_inference_single(model, data[0])
 
     s = Solver()
     weight_list = [model.linear1.weight, model.linear2.weight]
@@ -100,7 +92,7 @@ def run_verification(model: MNISTNet, data: th.Tensor, target: th.Tensor):
 
     print("Start solving")
     set_param(verbose=2)
-    set_param("parallel.enable", True)
+    # set_param("parallel.enable", True)
     while s.check() == sat:
         print(
             f"Solver prediction: {s.model()[Int('prediction')]}, Native prediction: {th_pred}"
@@ -111,7 +103,7 @@ def run_verification(model: MNISTNet, data: th.Tensor, target: th.Tensor):
 if __name__ == "__main__":
     wandb.init(project="snn-abs-verification", config=cfg)
 
-    model = MNISTNet(hidden_features=hidden_size).to(device)
+    model = AbsMNISTNet(hidden_features=hidden_size).to(device)
     model.load_state_dict(th.load(f"saved/model_{model_suffix}.pt"), strict=True)  # type: ignore
 
     MNIST_train = MNIST(
