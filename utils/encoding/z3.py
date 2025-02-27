@@ -101,7 +101,22 @@ def generate_snn(
                     ]
                     * data.n_spikes[presynaptic_layer, presynaptic_neuron]
                 )
-            floor(s, epsp, data.n_spikes[postsynaptic_layer, postsynaptic_neuron])
+            s.add(
+                Implies(
+                    epsp < 0,
+                    data.n_spikes[postsynaptic_layer, postsynaptic_neuron] == 0,
+                )
+            )  # type: ignore
+            s.add(
+                Implies(
+                    epsp >= 0,
+                    And(
+                        data.n_spikes[postsynaptic_layer, postsynaptic_neuron] <= epsp,
+                        epsp
+                        < data.n_spikes[postsynaptic_layer, postsynaptic_neuron] + 1,
+                    ),
+                )
+            )
             del epsp
 
     # Describe the prediction of the SNN

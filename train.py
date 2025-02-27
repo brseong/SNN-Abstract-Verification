@@ -1,4 +1,5 @@
 from functools import partial
+import pdb
 import torch as th
 import torch.nn.functional as F
 
@@ -63,7 +64,7 @@ def train(
 
         test_loss, test_acc = test(net=test_model, dataset=MNIST_test, T=T)
         print(
-            f"{'abstraction' if abs_test else ''}test loss = {test_loss}, abstraction test accuracy = {test_acc}"
+            f"{'abstraction ' if abs_test else ''}test loss = {test_loss}, {'abstraction ' if abs_test else ''}test accuracy = {test_acc}"
         )
 
 
@@ -72,10 +73,6 @@ def test(net: MNISTNet, dataset: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 
     data_loader = DataLoader(
         dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers
     )
-    if isinstance(net, AbsMNISTNet):
-        encoder = partial(encode_input, as_counts=True)
-    else:
-        encoder = encode_input
     net.eval()
     total_loss_test = 0
     total_acc_test = 0
@@ -84,11 +81,11 @@ def test(net: MNISTNet, dataset: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 
         target_onehot = F.one_hot(target, 10).float()
         y_hat = th.tensor(0.0)
         if isinstance(net, AbsMNISTNet):
-            y_hat = net(encoder(data, num_steps=T))
+            y_hat = net(encode_input(data, num_steps=T, as_counts=True))
         else:
-            encode = encoder(data, num_steps=T)
+            encode = encode_input(data, num_steps=T)
             for t in range(T):
-                y_hat = y_hat + net(encode[t])
+                y_hat = y_hat + net(encode[:, t])
         y_hat = y_hat / T
         loss = F.mse_loss(y_hat, target_onehot)
         total_loss_test += loss.item()
