@@ -52,20 +52,8 @@ def train(
         if save:
             th.save(net.state_dict(), "./saved/model.pt")
 
-        test_model = net
-        if abs_test:
-            test_model = AbsMNISTNet(hidden_features=hidden_features).to(device)
-            test_model.load_state_dict(th.load("./saved/model.pt"))
-
-            train_loss, train_acc = test(net=test_model, dataset=MNIST_train, T=T)
-            print(
-                f"abstraction train loss = {train_loss}, abstraction train accuracy = {train_acc}"
-            )
-
-        test_loss, test_acc = test(net=test_model, dataset=MNIST_test, T=T)
-        print(
-            f"{'abstraction ' if abs_test else ''}test loss = {test_loss}, {'abstraction ' if abs_test else ''}test accuracy = {test_acc}"
-        )
+        test_loss, test_acc = test(net=net, dataset=MNIST_test, T=T)
+        print(f"test loss = {test_loss}, test accuracy = {test_acc}")
 
 
 @th.no_grad()

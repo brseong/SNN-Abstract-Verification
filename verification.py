@@ -6,7 +6,7 @@ import wandb
 from z3.z3 import Int, Real, Solver, And, Implies, sat, set_param
 from utils.encoding.z3 import generate_snn, allocate_input
 from utils.encoding.snn import encode_input
-from utils.model import AbsMNISTNet
+from utils.model import AbsMNISTNet, MNISTNet
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import MNIST
@@ -46,29 +46,31 @@ def net_inference_single(model: th.nn.Module, data: th.Tensor) -> th.Tensor:
 
     Args:
         model (th.nn.Module): Network model
-        data (th.Tensor): Input data, shape (1, 28, 28)
+        data (th.Tensor): Input data, shape ``(T, 1, 28, 28)``
 
     Returns:
-        th.Tensor: Output tensor, shape (n_maxima,)
+        th.Tensor: Output tensor, shape ``(n_maxima,)``
     """
     model.eval()
-    y_hat = model(data.unsqueeze(0)).squeeze(0)
+    y_hat = th.tensor(0.0)
+    for t in range(data.shape[0]):
+        y_hat = y_hat + model(data[t].unsqueeze(0)).squeeze(0)
     return (y_hat == y_hat.max()).nonzero(as_tuple=True)[0]
 
 
 @th.no_grad()
-def run_verification(model: AbsMNISTNet, data: th.Tensor, target: th.Tensor):
+def run_verification(model: MNISTNet, data: th.Tensor, target: th.Tensor):
     """Run verification on the network.
 
     Args:
-        model (AbsMNISTNet): AbsMNISTNet model
+        model (MNISTNet): MNISTNet model
         data (th.Tensor): Input data, shape ``(batch_size, 1, 28, 28)``
         target (th.Tensor): Target labels, shape ``(batch_size,)``
     """
     data, target = data.to(device), target.to(device)
     data = encode_input(
-        data, num_steps=n_steps, as_counts=True
-    )  # data.shape = (batch_size, 1, 28, 28)
+        data, num_steps=n_steps, as_counts=False
+    )  # data.shape = (batch_size, n_steps, 1, 28, 28)
 
     th_pred = net_inference_single(model, data[0])
 
@@ -103,7 +105,7 @@ def run_verification(model: AbsMNISTNet, data: th.Tensor, target: th.Tensor):
 if __name__ == "__main__":
     wandb.init(project="snn-abs-verification", config=cfg)
 
-    model = AbsMNISTNet(hidden_features=hidden_size).to(device)
+    model = MNISTNet(hidden_features=hidden_size).to(device)
     model.load_state_dict(th.load(f"saved/model_{model_suffix}.pt"), strict=True)  # type: ignore
 
     MNIST_train = MNIST(
