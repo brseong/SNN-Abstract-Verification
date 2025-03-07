@@ -1,6 +1,18 @@
 import pdb
 import torch as th
-from z3.z3 import Int, Real, RealVal, Solver, And, Implies, sat, ArithRef, BoolRef
+from z3.z3 import (
+    Int,
+    Real,
+    RealVal,
+    Solver,
+    And,
+    Implies,
+    sat,
+    ArithRef,
+    BoolRef,
+    If,
+    Sum,
+)
 from uuid import uuid4
 from ..types import Z3Data, Abstraction
 from tqdm.auto import tqdm
@@ -93,26 +105,32 @@ def generate_snn(
             range(data.n_features[postsynaptic_layer]), leave=False
         ):
             presynaptic_layer = postsynaptic_layer - 1
-            epsp = RealVal(0)
+            epsps = list[ArithRef]()
             for presynaptic_neuron in range(data.n_features[presynaptic_layer]):
-                epsp += (
+                epsps.append(
                     data.weight[
                         presynaptic_layer, presynaptic_neuron, postsynaptic_neuron
                     ]
                     * data.n_spikes[presynaptic_layer, presynaptic_neuron]
                 )
+            epsp_sum = Sum(epsps)
+            clamped_epsp = Real(
+                f"clamped_epsp_{postsynaptic_layer}_{postsynaptic_neuron}"
+            )
+            s.add(clamped_epsp == If(epsp_sum > 0, 1, epsp_sum))
             s.add(
                 Implies(
-                    epsp < 0,
+                    clamped_epsp < 0,
                     data.n_spikes[postsynaptic_layer, postsynaptic_neuron] == 0,
                 )
             )  # type: ignore
             s.add(
                 Implies(
-                    epsp >= 0,
+                    clamped_epsp >= 0,
                     And(
-                        data.n_spikes[postsynaptic_layer, postsynaptic_neuron] <= epsp,
-                        epsp
+                        data.n_spikes[postsynaptic_layer, postsynaptic_neuron]
+                        <= clamped_epsp,
+                        clamped_epsp
                         < data.n_spikes[postsynaptic_layer, postsynaptic_neuron] + 1,
                     ),
                 )

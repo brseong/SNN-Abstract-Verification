@@ -17,15 +17,16 @@ def train(
     dataset: Dataset[tuple[th.Tensor, th.Tensor]],
     num_epochs: int = 10,
     learning_rate: float = 1e-3,
+    weight_decay=1e-3,
     T: int = 20,
     save: bool = False,
-    abs_test: bool = False,
 ) -> None:
     data_loader = DataLoader(
         dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers
     )
-    optim = th.optim.Adam(net.parameters(), lr=learning_rate)
-    encoder = encoding.PoissonEncoder()
+    optim = th.optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    # optim = th.optim.Adam(net.parameters(), lr=learning_rate)
+    # encoder = encoding.PoissonEncoder()
     for epoch in range(num_epochs):
         total_loss_train = 0
         total_acc_train = 0
@@ -34,11 +35,18 @@ def train(
             data, target = data.to(device), target.to(device)
             optim.zero_grad()
             target_onehot = F.one_hot(target, 10).float()
-            y_hat = th.tensor(0.0)
-            for _ in range(T):
-                encode = encoder(data)
-                y_hat = y_hat + net(encode)
-            y_hat = y_hat / T
+            # y_hat = th.tensor(0.0)
+            # for _ in range(T):
+            #     encode = encoder(data)
+            #     y_hat = y_hat + net(encode)
+            # while (net.sn1.v > net.sn1.v_threshold).any() or (
+            #     net.sn2.v > net.sn2.v_threshold
+            # ).any():
+            #     y_hat = y_hat + net(th.zeros_like(encode))
+            # y_hat = y_hat / T
+            encoded = encode_input(data, num_steps=T)
+            y_hat = net(encoded, is_sequence=True)
+
             loss = F.mse_loss(y_hat, target_onehot)
             loss.backward()
             optim.step()
@@ -72,9 +80,10 @@ def test(net: MNISTNet, dataset: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 
             y_hat = net(encode_input(data, num_steps=T, as_counts=True))
         else:
             encode = encode_input(data, num_steps=T)
-            for t in range(T):
-                y_hat = y_hat + net(encode[:, t])
-        y_hat = y_hat / T
+            # for t in range(T):
+            #     y_hat = y_hat + net(encode[:, t])
+            y_hat = net(encode, is_sequence=True)
+        # y_hat = y_hat / T
         loss = F.mse_loss(y_hat, target_onehot)
         total_loss_test += loss.item()
         pred_target = y_hat.argmax(1)
@@ -98,7 +107,7 @@ if __name__ == "__main__":
     hidden_features = 32
     save = True
 
-    device = th.device("cuda:0" if th.cuda.is_available() else "cpu")
+    device = th.device("cuda" if th.cuda.is_available() else "cpu")
     net = MNISTNet(hidden_features=hidden_features).to(device)
 
     MNIST_train = MNIST(
@@ -115,5 +124,4 @@ if __name__ == "__main__":
         learning_rate=learning_rate,
         T=num_steps,
         save=save,
-        abs_test=False,
     )

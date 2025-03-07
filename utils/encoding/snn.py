@@ -18,8 +18,8 @@ def encode_input(
         encoder (PoissonEncoder, optional): Encoder object. Defaults to ``PoissonEncoder()``.
 
     Returns:
-        th.Tensor: Encoded spikes, shape (batch_size, num_steps, 1, 28, 28) if ``as_counts`` is False,
-        and (batch_size, 1, 28, 28) if ``as_counts`` is True.
+        th.Tensor: Encoded spikes, shape ``(batch_size, num_steps, 1, 28, 28)`` if ``as_counts`` is ``False``,
+        and ``(batch_size, 1, 28, 28)`` if ``as_counts`` is ``True``.
     """
     batch_size, *features = data.shape
     encoded = th.zeros(batch_size, num_steps, *features, device=data.device)
