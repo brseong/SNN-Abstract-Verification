@@ -35,15 +35,6 @@ def train(
             data, target = data.to(device), target.to(device)
             optim.zero_grad()
             target_onehot = F.one_hot(target, 10).float()
-            # y_hat = th.tensor(0.0)
-            # for _ in range(T):
-            #     encode = encoder(data)
-            #     y_hat = y_hat + net(encode)
-            # while (net.sn1.v > net.sn1.v_threshold).any() or (
-            #     net.sn2.v > net.sn2.v_threshold
-            # ).any():
-            #     y_hat = y_hat + net(th.zeros_like(encode))
-            # y_hat = y_hat / T
             encoded = encode_input(data, num_steps=T)
             y_hat = net(encoded, is_sequence=True)
 
@@ -75,14 +66,8 @@ def test(net: MNISTNet, dataset: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 
     for data, target in tqdm(iter(data_loader)):
         data, target = data.to(device), target.to(device)
         target_onehot = F.one_hot(target, 10).float()
-        y_hat = th.tensor(0.0)
-        if isinstance(net, AbsMNISTNet):
-            y_hat = net(encode_input(data, num_steps=T, as_counts=True))
-        else:
-            encode = encode_input(data, num_steps=T)
-            # for t in range(T):
-            #     y_hat = y_hat + net(encode[:, t])
-            y_hat = net(encode, is_sequence=True)
+        encode = encode_input(data, num_steps=T)
+        y_hat = net(encode, is_sequence=True)
         # y_hat = y_hat / T
         loss = F.mse_loss(y_hat, target_onehot)
         total_loss_test += loss.item()
@@ -95,26 +80,26 @@ def test(net: MNISTNet, dataset: Dataset[tuple[th.Tensor, th.Tensor]], T: int = 
 
 
 if __name__ == "__main__":
-    th.manual_seed(0)
-    th.cuda.manual_seed(0)
+    th.manual_seed(42)
+    th.cuda.manual_seed(42)
     th.use_deterministic_algorithms(True)
 
     num_epochs = 50
     batch_size = 32
     num_workers = 4
-    learning_rate = 1e-2
+    learning_rate = 1e-3
     num_steps = 20
-    hidden_features = 32
+    hidden_features = 512
     save = True
 
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     net = MNISTNet(hidden_features=hidden_features).to(device)
 
     MNIST_train = MNIST(
-        root="./data", download=True, train=True, transform=transforms.ToTensor()
+        root=".", download=True, train=True, transform=transforms.ToTensor()
     )
     MNIST_test = MNIST(
-        root="./data", download=True, train=False, transform=transforms.ToTensor()
+        root=".", download=True, train=False, transform=transforms.ToTensor()
     )
 
     train(

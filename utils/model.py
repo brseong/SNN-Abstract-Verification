@@ -9,19 +9,17 @@ class MNISTNet(th.nn.Module):
         in_features: int = 28 * 28,
         hidden_features: int = 512,
         out_features: int = 10,
-        wrap_up: bool = False,
     ):
         super(MNISTNet, self).__init__()
         self.flatten1 = nn.Flatten()
         self.linear1 = nn.Linear(
             in_features, hidden_features, bias=False
         )  # (hidden_features, in_features)
-        self.sn1 = neuron.IFNode(v_reset=None)
+        self.sn1 = neuron.IFNode(v_reset=1.0)
         self.linear2 = nn.Linear(
             hidden_features, out_features, bias=False
         )  # (out_features, hidden_features)
-        self.sn2 = neuron.IFNode(v_reset=None)
-        self.wrap_up = wrap_up
+        self.sn2 = neuron.IFNode(v_reset=1.0)
 
     def forward_single(self, x: th.Tensor):
         x = self.flatten1(x)
@@ -45,12 +43,7 @@ class MNISTNet(th.nn.Module):
         if is_sequence:
             ret = self.forward_single(x[:, 0])
             for t in range(1, x.size(1)):
-                ret += self.forward_single(x[:, t])
-            if self.wrap_up:
-                while (self.sn1.v > self.sn1.v_threshold).any() or (
-                    self.sn2.v > self.sn2.v_threshold
-                ).any():
-                    ret += self.forward_single(th.zeros_like(x[:, 0]))
+                ret.add_(self.forward_single(x[:, t]))
             return ret / x.size(1)
         else:
             return self.forward_single(x)
